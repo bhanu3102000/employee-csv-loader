@@ -72,6 +72,10 @@ def load(config_path, dry_run=False):
     connection = pyodbc.connect(connection_string, autocommit=False, timeout=15)
     try:
         cursor = connection.cursor()
+        if target.get("truncate_first", False):
+            table = identifier(target["schema"]) + "." + identifier(target["table"])
+            cursor.execute(f"TRUNCATE TABLE {table}")
+            print(f"Truncated {table}")
         cursor.executemany(sql, rows)
         connection.commit()
         print(f"Loaded {len(rows)} rows successfully.")
