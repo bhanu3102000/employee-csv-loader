@@ -1,4 +1,5 @@
 """Small, configuration-driven CSV loader. Start with --dry-run."""
+# added a new comment to test the commit hook
 import argparse
 import csv
 import json
