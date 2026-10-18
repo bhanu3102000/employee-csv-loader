@@ -2,7 +2,10 @@
 # added a new comment to test the commit hook
 # Testing the commit hook again from adhoc_branch
 # commit hook test 3
+<<<<<<< HEAD
 # commit hook test 4
+=======
+>>>>>>> e24a809 (commit 3)
 import argparse
 import csv
 import json
