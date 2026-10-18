@@ -41,11 +41,11 @@ def read_source(config_path):
                 raise ValueError(f"CSV line {line_number}: missing value")
             rows.append(tuple(row))
     sql = f"INSERT INTO {table} ({', '.join(quoted_columns)}) VALUES ({', '.join('?' for _ in columns)})"
-    return target, source_path, rows, sql
+    return target, source_path, columns, rows, sql
 
 
 def load(config_path, dry_run=False):
-    target, source_path, rows, sql = read_source(config_path)
+    target, source_path, columns, rows, sql = read_source(config_path)
     print(f"Source: {source_path}")
     print(f"Target: {target['database']}.{target['schema']}.{target['table']}")
     print(f"Validated rows: {len(rows)}")
@@ -71,14 +71,70 @@ def load(config_path, dry_run=False):
         )
     connection = pyodbc.connect(connection_string, autocommit=False, timeout=15)
     try:
+        load_mode = target.get("load_mode", "insert")
+        truncate_first = target.get("truncate_first", False)
+
+        if load_mode not in ("insert", "upsert"):
+            raise ValueError("load_mode must be 'insert' or 'upsert'")
+
+        if load_mode == "upsert" and truncate_first:
+            raise ValueError("Upsert requires truncate_first=false")
+
         cursor = connection.cursor()
-        if target.get("truncate_first", False):
-            table = identifier(target["schema"]) + "." + identifier(target["table"])
+        table = identifier(target["schema"]) + "." + identifier(target["table"])
+
+        if truncate_first:
             cursor.execute(f"TRUNCATE TABLE {table}")
-            print(f"Truncated {table}")
-        cursor.executemany(sql, rows)
+            print(f"Successfully truncated table {table}.")
+
+        if load_mode == "insert":
+            cursor.executemany(sql, rows)
+
+        else:
+            key_column = target.get("key_column", "employee_id")
+
+            if key_column not in columns:
+                raise ValueError(f"CSV is missing key column: {key_column}")
+
+            key_index = columns.index(key_column)
+            update_indexes = [
+                index
+                for index, column in enumerate(columns)
+                if column != key_column
+            ]
+
+            if not update_indexes:
+                raise ValueError("Upsert needs at least one non-key column")
+
+            set_clause = ", ".join(
+                f"{identifier(columns[index])} = ?"
+                for index in update_indexes
+            )
+
+            upsert_sql = f"""
+                UPDATE {table} WITH (UPDLOCK, SERIALIZABLE)
+                SET {set_clause}
+                WHERE {identifier(key_column)} = ?;
+
+                IF @@ROWCOUNT = 0
+                BEGIN
+                    {sql};
+                END;
+            """
+
+            for row in rows:
+                update_values = tuple(row[index] for index in update_indexes)
+                key_value = row[key_index]
+
+                # Parameters: UPDATE values, key, then INSERT values.
+                cursor.execute(
+                    upsert_sql,
+                    update_values + (key_value,) + tuple(row)
+                )
+
         connection.commit()
-        print(f"Loaded {len(rows)} rows successfully.")
+        print(f"Successfully processed {len(rows)} CSV records.")
+
     except Exception:
         connection.rollback()
         raise
