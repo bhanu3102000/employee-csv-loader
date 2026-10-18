@@ -8,7 +8,7 @@
     "database": "PracticeDB",
     "schema": "dbo",
     "table": "employees",
-    "truncate_first": true,
+    "truncate_first": false,
     "windows_auth": true,
     "trust_server_certificate": true
     
