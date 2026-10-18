@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
-
+import pyodbc
 
 def identifier(value):
     """Restrict SQL names; values are passed separately as parameters."""
@@ -55,7 +55,7 @@ def load(config_path, dry_run=False):
     if not rows:
         print("No rows to load.")
         return
-    import pyodbc  # Only needed when actually loading SQL Server.
+      # Only needed when actually loading SQL Server.
     connection_string = (
         f"DRIVER={odbc_value(target['driver'])};"
         f"SERVER={odbc_value(target['server'])};"
