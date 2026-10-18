@@ -1,0 +1,14 @@
+{
+  "source": {
+    "csv_path": "data/employees.csv"
+  },
+  "target": {
+    "driver": "ODBC Driver 18 for SQL Server",
+    "server": "localhost",
+    "database": "PracticeDB",
+    "schema": "dbo",
+    "table": "employees",
+    "windows_auth": true,
+    "trust_server_certificate": false
+  }
+}
