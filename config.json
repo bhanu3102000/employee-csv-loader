@@ -9,6 +9,8 @@
     "schema": "dbo",
     "table": "employees",
     "truncate_first": true,
+    "load_mode": "insert",
+    "key_column": "employee_id",
     "windows_auth": true,
     "trust_server_certificate": true
     
